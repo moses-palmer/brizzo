@@ -297,18 +297,13 @@ impl Cache {
 ///
 /// # Arguments
 /// *  `session` - The session.
-pub fn load_id(
-    session: &Session,
-) -> Option<Result<xid::Identifier, xid::Error>> {
-    let string = session
+pub fn load_id(session: &Session) -> Result<xid::Identifier, xid::Error> {
+    session
         .get::<String>(XID_COOKIE)
         .map_err(|_| xid::Error::Format)
-        .transpose()?;
-    Some(
-        string
-            .and_then(|s| s.parse::<xid::IdentifierCookie>())
-            .map(xid::Identifier::from),
-    )
+        .and_then(|c| c.ok_or(xid::Error::Missing))
+        .and_then(|s| s.parse::<xid::IdentifierCookie>())
+        .map(xid::Identifier::from)
 }
 
 /// Stores an identifier cookie to the session.
@@ -341,5 +336,9 @@ pub fn assert_id<F>(
 where
     F: FnOnce() -> xid::Identifier,
 {
-    load_id(session).unwrap_or_else(|| store_id(session, default()))
+    match load_id(session) {
+        Ok(id) => Ok(id),
+        Err(xid::Error::Missing) => store_id(session, default()),
+        e => e,
+    }
 }

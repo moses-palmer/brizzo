@@ -17,6 +17,9 @@ pub enum Error {
 
     /// The cookie has expired.
     Expired,
+
+    /// The cookie is missing.
+    Missing,
 }
 
 /// A room identifier.
