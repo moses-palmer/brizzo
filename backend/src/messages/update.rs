@@ -32,36 +32,47 @@ pub enum Error {
 
     /// The specified transition is illegal.
     IllegalTransition,
+
+    /// An internal error occurred.
+    InternalError,
 }
 
 #[put("/{message_name}")]
 pub async fn handle(
     path: web::Path<Path>,
     req: web::Json<Request>,
-    cache: web::Data<super::Cache>,
-    _store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
+    store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
     session: Session,
 ) -> impl Responder {
-    if let Some(message) =
-        cache.read().iter().find(|m| m.name == path.message_name)
-    {
-        let current = super::assert_id(&session, || message.entry())?;
-        if let Some(next) = message
-            .lookup(current)
-            .and_then(|pos| message.transition(pos, req.xid))
-        {
-            super::store_id(&session, req.xid)?;
-            message
-                .describe(next)
+    let mut store = store.lock()?;
+
+    if !store.exists(&path.message_name)? {
+        Err(Error::UnknownMessage)
+    } else {
+        let current_id = match super::load_id(&session) {
+            Ok(id) => Some(id),
+            Err(xid::Error::Expired) | Err(xid::Error::Missing) => None,
+            Err(e) => return Err(e.into()),
+        };
+        let next_id = req.xid;
+        let current_room = store
+            .get(&path.message_name, current_id)?
+            .ok_or(Error::UnknownRoom)?;
+
+        if current_room.see.iter().find(|&&id| id == next_id).is_some() {
+            super::store_id(&session, next_id)?;
+            store
+                .get(&path.message_name, Some(next_id))?
                 .ok_or(Error::UnknownRoom)
                 .map(web::Json)
         } else {
-            log::info!("Cannot transition from {} to {}", current, req.xid);
+            log::info!(
+                "Cannot transition from {:?} to {}",
+                current_id,
+                next_id
+            );
             Err(Error::IllegalTransition)
         }
-    } else {
-        log::info!("Message {} does not exist", path.message_name);
-        Err(Error::UnknownMessage)
     }
 }
 
@@ -71,6 +82,7 @@ impl fmt::Display for Error {
             Error::UnknownMessage => write!(f, "unknown message"),
             Error::UnknownRoom => write!(f, "unknown room"),
             Error::IllegalTransition => write!(f, "illegal transition"),
+            Error::InternalError => write!(f, "internal error"),
         }
     }
 }
@@ -81,6 +93,7 @@ impl ResponseError for Error {
             Error::UnknownMessage => http::StatusCode::NOT_FOUND,
             Error::UnknownRoom => http::StatusCode::NOT_FOUND,
             Error::IllegalTransition => http::StatusCode::NOT_FOUND,
+            Error::InternalError => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -88,5 +101,17 @@ impl ResponseError for Error {
 impl From<xid::Error> for Error {
     fn from(_: xid::Error) -> Self {
         Self::UnknownRoom
+    }
+}
+
+impl From<store::Error> for Error {
+    fn from(_source: store::Error) -> Self {
+        Self::InternalError
+    }
+}
+
+impl<T> From<sync::PoisonError<T>> for Error {
+    fn from(_source: sync::PoisonError<T>) -> Self {
+        Self::InternalError
     }
 }

@@ -2,6 +2,7 @@ use std::fmt;
 use std::sync;
 
 use actix_http::error::ResponseError;
+use actix_session::Session;
 use actix_web::{http, post, web, HttpRequest, HttpResponse, Responder};
 
 use maze;
@@ -53,6 +54,7 @@ pub enum Error {
 pub async fn handle(
     req: web::Json<Request>,
     store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
+    session: Session,
 ) -> impl Responder {
     let mut store = store.lock()?;
 
@@ -67,6 +69,7 @@ pub async fn handle(
             store.put_message(&super::Message::new(
                 &req.name, &req.text, req.shape, req.seed,
             ))?;
+            super::clear_id(&session);
             Ok(Response(req.name))
         }
     }
