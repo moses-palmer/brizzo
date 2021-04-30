@@ -1,0 +1,50 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>BRIZZO</title>
+        <link rel="stylesheet" href="style.css">
+        <script src="script.js" async></script>
+    </head>
+    <body>
+        <article>
+            <section>
+                <form>
+                    <label for="name">Name:</label>
+                    <input
+                            name="name"
+                            type="text"
+                            placeholder="A BRIZZO name"
+                            required="required"
+                            maxlength="64" />
+
+                    <label for="text">Message:</label>
+                    <input
+                            name="text"
+                            type="text"
+                            placeholder="A BRIZZO message"
+                            required="required"
+                            maxlength="64" />
+
+                    <label for="shape">Shape:</label>
+                    <select
+                            name="shape">
+                        <option value="hex">Hexagonal</option>
+                        <option value="quad">Quadratic</option>
+                        <option value="tri">Triangular</option>
+                    </select>
+                    <hr/>
+                    <input
+                        type="button"
+                        value="Create message"
+                        onclick="create(
+                            document.querySelector('input[name=name]')
+                                .value,
+                            document.querySelector('input[name=text]')
+                                .value,
+                            document.querySelector('select[name=shape]')
+                                .value)" />
+                </form>
+            </section>
+        </article>
+    </body>
+</html>
