@@ -18,31 +18,36 @@ pub struct Path {
 /// The possible error values.
 #[derive(Debug)]
 pub enum Error {
-    /// The message name is invalid.
+    /// The message is unknown.
     UnknownMessage,
 
     /// The room is unknown.
     UnknownRoom,
+
+    /// An internal error occurred.
+    InternalError,
 }
 
 #[get("/{message_name}")]
 pub async fn handle(
     path: web::Path<Path>,
-    cache: web::Data<super::Cache>,
-    _store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
+    store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
     session: Session,
 ) -> impl Responder {
-    if let Some(message) =
-        cache.read().iter().find(|m| m.name == path.message_name)
-    {
-        message
-            .lookup(super::assert_id(&session, || message.entry())?)
-            .and_then(|pos| message.describe(pos))
-            .map(web::Json)
-            .ok_or(Error::UnknownRoom)
-    } else {
-        log::info!("Message {} does not exist", path.message_name);
+    let mut store = store.lock()?;
+
+    if !store.exists(&path.message_name)? {
         Err(Error::UnknownMessage)
+    } else {
+        let current_id = match super::load_id(&session) {
+            Ok(id) => Some(id),
+            Err(xid::Error::Expired) | Err(xid::Error::Missing) => None,
+            Err(e) => return Err(e.into()),
+        };
+        store
+            .get(&path.message_name, current_id)?
+            .ok_or(Error::UnknownRoom)
+            .map(web::Json)
     }
 }
 
@@ -51,6 +56,7 @@ impl fmt::Display for Error {
         match self {
             Error::UnknownMessage => write!(f, "unknown message"),
             Error::UnknownRoom => write!(f, "unknown room"),
+            Error::InternalError => write!(f, "internal error"),
         }
     }
 }
@@ -60,6 +66,7 @@ impl ResponseError for Error {
         match self {
             Error::UnknownMessage => http::StatusCode::NOT_FOUND,
             Error::UnknownRoom => http::StatusCode::NOT_FOUND,
+            Error::InternalError => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -67,5 +74,17 @@ impl ResponseError for Error {
 impl From<xid::Error> for Error {
     fn from(_: xid::Error) -> Self {
         Self::UnknownRoom
+    }
+}
+
+impl From<store::Error> for Error {
+    fn from(_source: store::Error) -> Self {
+        Self::InternalError
+    }
+}
+
+impl<T> From<sync::PoisonError<T>> for Error {
+    fn from(_source: sync::PoisonError<T>) -> Self {
+        Self::InternalError
     }
 }
