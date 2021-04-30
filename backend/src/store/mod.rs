@@ -3,6 +3,10 @@ use std::time;
 use r2d2_redis;
 use r2d2_redis::r2d2;
 use r2d2_redis::redis;
+use r2d2_redis::redis::Commands;
+
+use crate::messages;
+use crate::messages::xid;
 
 mod error;
 pub use self::error::Error;
@@ -36,5 +40,78 @@ impl Store {
             )?,
             ttl,
         })
+    }
+
+    /// Reads a room description from the store.
+    ///
+    /// # Arguments
+    /// *  `message_name` - The name of the message.
+    /// *  `id` - The room ID.
+    pub fn get(
+        &mut self,
+        message_name: &str,
+        id: Option<xid::Identifier>,
+    ) -> Result<Option<messages::Room>, Error> {
+        let mut conn = self.pool.get()?;
+
+        Ok(conn.get(
+            id.map(|id| self.key(message_name, id))
+                .unwrap_or_else(|| message_name.into()),
+        )?)
+    }
+
+    /// Checks whether a message exists.
+    ///
+    /// # Arguments
+    /// *  `message_name` - The name of the message.
+    pub fn exists(&mut self, message_name: &str) -> Result<bool, Error> {
+        let mut conn = self.pool.get()?;
+
+        Ok(conn.exists(message_name)?)
+    }
+
+    /// Stores an entire message in the store.
+    ///
+    /// This method will fail if a message with the given name already exists.
+    ///
+    /// # Arguments
+    /// *  `message` - The message to store.
+    pub fn put_message(
+        &mut self,
+        message: &messages::Message,
+    ) -> Result<(), Error> {
+        let mut conn = self.pool.get()?;
+
+        if conn.exists(message.name())? {
+            Err(Error::Exists)
+        } else {
+            // First store the entrance room...
+            let entrance = message
+                .describe((0isize, 0isize).into())
+                .ok_or(Error::InternalError)?;
+            conn.set_ex(message.name(), entrance, self.ttl.as_secs() as usize)
+                .map_err(|_| Error::WriteError)?;
+
+            // ...then all the others
+            for room in message.rooms() {
+                conn.set_ex(
+                    self.key(message.name(), room.xid),
+                    room,
+                    self.ttl.as_secs() as usize,
+                )
+                .map_err(|_| Error::WriteError)?;
+            }
+
+            Ok(())
+        }
+    }
+
+    /// Generates the key for a room in a message.
+    ///
+    /// # Arguments
+    /// *  `message_name` - The name of the message.
+    /// *  `id` - The ID of the room.
+    fn key(&self, message_name: &str, id: xid::Identifier) -> String {
+        format!("{}.{}", message_name, id)
     }
 }

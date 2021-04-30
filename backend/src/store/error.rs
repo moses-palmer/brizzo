@@ -10,6 +10,18 @@ use r2d2_redis::redis;
 pub enum Error {
     /// A connection error occurred.
     Connection,
+
+    /// An internal error occurred.
+    InternalError,
+
+    /// A message exists.
+    Exists,
+
+    /// An error occurred while writing.
+    ReadError,
+
+    /// An error occurred while writing.
+    WriteError,
 }
 
 impl error::Error for Error {}
@@ -25,6 +37,7 @@ impl From<Error> for io::ErrorKind {
     fn from(source: Error) -> Self {
         match source {
             Error::Connection => Self::ConnectionRefused,
+            _ => Self::Other,
         }
     }
 }
