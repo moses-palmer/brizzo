@@ -1,10 +1,13 @@
 use std::fmt;
+use std::sync;
 
 use actix_http::error::ResponseError;
 use actix_web::{http, post, web, HttpRequest, HttpResponse, Responder};
 
 use maze;
 use maze::initialize;
+
+use crate::store;
 
 /// The maximum length of a message.
 const MAX_LENGTH: usize = 64;
@@ -47,6 +50,7 @@ pub enum Error {
 pub async fn handle(
     req: web::Json<Request>,
     cache: web::Data<super::Cache>,
+    _store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
 ) -> impl Responder {
     if req.text.len() > MAX_LENGTH || req.text.len() < 1 {
         log::info!("Invalid message: {}", req.text);

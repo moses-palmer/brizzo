@@ -3,12 +3,14 @@ extern crate serde;
 
 use std::env;
 use std::io;
+use std::sync;
 
 use actix_web::{App, HttpServer};
 use env_logger;
 
 mod configuration;
 mod messages;
+mod store;
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
@@ -22,10 +24,12 @@ async fn main() -> io::Result<()> {
 
     let cache = messages::Cache::new();
 
+    let store = sync::Arc::new(sync::Mutex::new(configuration.store()?));
     HttpServer::new(move || {
         App::new()
             // Grant access to the cache
             .data(cache.clone())
+            .data(store.clone())
             // Persist session as a cookie
             .wrap(configuration.session())
             .service(messages::create::handle)

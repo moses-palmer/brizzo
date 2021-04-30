@@ -1,9 +1,12 @@
 use std::fs;
 use std::io;
 use std::io::Read;
+use std::time;
 
 use actix_session::CookieSession;
 use toml;
+
+use crate::store;
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Configuration {
@@ -12,6 +15,9 @@ pub struct Configuration {
 
     /// Session related configurations.
     session: Session,
+
+    /// Redis connection information.
+    redis: Redis,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -30,6 +36,15 @@ struct Session {
 
     /// The name of the cookie
     name: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+struct Redis {
+    /// The connection information.
+    connection_string: String,
+
+    /// The TTL for records, in milliseconds.
+    ttl: u64,
 }
 
 impl Configuration {
@@ -57,5 +72,13 @@ impl Configuration {
         CookieSession::signed(self.session.secret.as_bytes())
             .secure(self.session.secure)
             .name(&self.session.name)
+    }
+
+    /// A store for values.
+    pub fn store(&self) -> Result<store::Store, store::Error> {
+        store::Store::new(
+            self.redis.connection_string.clone(),
+            time::Duration::from_millis(self.redis.ttl),
+        )
     }
 }

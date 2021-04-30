@@ -1,10 +1,12 @@
 use std::fmt;
+use std::sync;
 
 use actix_http::error::ResponseError;
 use actix_session::Session;
 use actix_web::{get, http, web, Responder};
 
 use super::xid;
+use crate::store;
 
 /// The parameters passed in the path.
 #[derive(Deserialize)]
@@ -27,6 +29,7 @@ pub enum Error {
 pub async fn handle(
     path: web::Path<Path>,
     cache: web::Data<super::Cache>,
+    _store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
     session: Session,
 ) -> impl Responder {
     if let Some(message) =
