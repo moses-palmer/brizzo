@@ -40,6 +40,9 @@ pub enum Error {
 
     /// A message with the same name already exists.
     AlreadyExists,
+
+    /// An internal error occurred.
+    InternalError,
 }
 
 /// Creates a message.
@@ -49,20 +52,23 @@ pub enum Error {
 #[post("/")]
 pub async fn handle(
     req: web::Json<Request>,
-    cache: web::Data<super::Cache>,
-    _store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
+    store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
 ) -> impl Responder {
+    let mut store = store.lock()?;
+
     if req.text.len() > MAX_LENGTH || req.text.len() < 1 {
         log::info!("Invalid message: {}", req.text);
         Err(Error::MessageInvalid)
     } else {
-        let req = req.into_inner();
-        cache
-            .store(super::Message::new(
+        if store.exists(&req.name)? {
+            Err(Error::AlreadyExists)
+        } else {
+            let req = req.into_inner();
+            store.put_message(&super::Message::new(
                 &req.name, &req.text, req.shape, req.seed,
-            ))
-            .map(Response)
-            .map_err(|_| Error::AlreadyExists)
+            ))?;
+            Ok(Response(req.name))
+        }
     }
 }
 
@@ -93,6 +99,7 @@ impl fmt::Display for Error {
         match self {
             Error::MessageInvalid => write!(f, "message invalid"),
             Error::AlreadyExists => write!(f, "already exists"),
+            Error::InternalError => write!(f, "internal error"),
         }
     }
 }
@@ -102,6 +109,19 @@ impl ResponseError for Error {
         match self {
             Error::MessageInvalid => http::StatusCode::BAD_REQUEST,
             Error::AlreadyExists => http::StatusCode::CONFLICT,
+            Error::InternalError => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
+    }
+}
+
+impl From<store::Error> for Error {
+    fn from(_source: store::Error) -> Self {
+        Self::InternalError
+    }
+}
+
+impl<T> From<sync::PoisonError<T>> for Error {
+    fn from(_source: sync::PoisonError<T>) -> Self {
+        Self::InternalError
     }
 }
