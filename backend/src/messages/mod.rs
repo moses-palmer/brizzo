@@ -293,6 +293,14 @@ impl Cache {
     }
 }
 
+/// Clears the session cookie.
+///
+/// # Arguments
+/// *  `session` - The session.
+pub fn clear_id(session: &Session) {
+    session.remove(XID_COOKIE);
+}
+
 /// Loads the identifier cookie from the session.
 ///
 /// # Arguments
