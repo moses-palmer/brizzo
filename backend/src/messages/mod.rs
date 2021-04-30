@@ -109,9 +109,15 @@ impl Message {
     /// # Arguments
     /// *  `pos` - The room position.
     pub fn describe(&self, pos: matrix::Pos) -> Option<Room> {
+        let center = self.maze.center(pos);
         self.maze.data(pos).map(|&data| Room {
             xid: data.id,
-            pos: self.maze.center(pos),
+            pos: self
+                .maze
+                .walls(pos)
+                .iter()
+                .map(|wall| center + wall.span.0)
+                .collect(),
             col: data.color.to_string(),
             see: self
                 .maze
@@ -167,8 +173,8 @@ pub struct Room {
     /// The room identifier.
     pub xid: xid::Identifier,
 
-    /// The position of the centre of the room.
-    pub pos: physical::Pos,
+    /// The position of the corners of the room.
+    pub pos: Vec<physical::Pos>,
 
     /// The colour of the room.
     pub col: String,
