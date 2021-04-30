@@ -115,3 +115,28 @@ impl Store {
         format!("{}.{}", message_name, id)
     }
 }
+
+impl redis::FromRedisValue for messages::Room {
+    fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
+        match v {
+            redis::Value::Data(v) => {
+                rmp_serde::from_read_ref(v).map_err(|_| {
+                    (redis::ErrorKind::TypeError, "invalid room data").into()
+                })
+            }
+            _ => Err((redis::ErrorKind::TypeError, "invalid room data").into()),
+        }
+    }
+}
+
+impl redis::ToRedisArgs for messages::Room {
+    fn write_redis_args<W: ?Sized>(&self, out: &mut W)
+    where
+        W: redis::RedisWrite,
+    {
+        match rmp_serde::to_vec(self) {
+            Ok(v) => out.write_arg(&v),
+            Err(_) => log::warn!("Failed to write {:?} to redis", self),
+        }
+    }
+}
