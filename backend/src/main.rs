@@ -21,14 +21,10 @@ async fn main() -> io::Result<()> {
             .expect("BRIZZO_CONFIGURATION_FILE not set"),
     )?;
     let bind = configuration.server_bind();
-
-    let cache = messages::Cache::new();
-
     let store = sync::Arc::new(sync::Mutex::new(configuration.store()?));
     HttpServer::new(move || {
         App::new()
-            // Grant access to the cache
-            .data(cache.clone())
+            // Grant access to the store
             .data(store.clone())
             // Persist session as a cookie
             .wrap(configuration.session())

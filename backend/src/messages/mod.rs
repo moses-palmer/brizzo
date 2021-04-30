@@ -1,6 +1,4 @@
-use std::collections::vec_deque;
 use std::ops;
-use std::sync;
 
 use actix_session::Session;
 use r2d2_redis::redis;
@@ -17,9 +15,6 @@ pub mod create;
 pub mod read;
 pub mod update;
 pub mod xid;
-
-/// The maximum number of cached messages.
-const MAX_MESSAGES: usize = 64;
 
 /// The name of the room identifier cookie.
 const XID_COOKIE: &'static str = "xid";
@@ -205,52 +200,6 @@ impl redis::ToRedisArgs for Room {
         match rmp_serde::to_vec(self) {
             Ok(v) => out.write_arg(&v),
             Err(_) => log::warn!("Failed to write {:?} to redis", self),
-        }
-    }
-}
-
-/// The room cache type.
-#[derive(Clone)]
-pub struct Cache(sync::Arc<sync::RwLock<vec_deque::VecDeque<Message>>>);
-
-impl Cache {
-    /// Creates a new cache.
-    pub fn new() -> Self {
-        Self(sync::Arc::new(
-            sync::RwLock::new(vec_deque::VecDeque::new()),
-        ))
-    }
-
-    /// Grants access to cached messages.
-    ///
-    /// # Panics
-    /// This function will panic if the cache lock cannot be acquired.
-    pub fn read(&self) -> sync::RwLockReadGuard<vec_deque::VecDeque<Message>> {
-        self.0.read().unwrap()
-    }
-
-    /// Attempts to cache a message.
-    ///
-    /// If a message with the same name already exists, this function will
-    /// return the message wrapped in an error.
-    ///
-    /// # Arguments
-    /// *  `message` - The message to cache.
-    ///
-    /// # Panics
-    /// This function will panic if the cache lock cannot be acquired.
-    pub fn store(&self, message: Message) -> Result<String, Message> {
-        let mut cache = self.0.write().unwrap();
-        if cache.iter().any(|m| m.name == message.name) {
-            Err(message)
-        } else {
-            if cache.len() >= MAX_MESSAGES {
-                (*cache).pop_front();
-            }
-            let result = message.name.clone();
-            (*cache).push_back(message);
-
-            Ok(result)
         }
     }
 }
