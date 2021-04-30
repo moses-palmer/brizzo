@@ -3,6 +3,8 @@ use std::ops;
 use std::sync;
 
 use actix_session::Session;
+use r2d2_redis::redis;
+use rmp_serde;
 
 use maze::initialize;
 use maze::matrix;
@@ -193,7 +195,7 @@ impl ops::Div<usize> for Intermediate {
 }
 
 /// A room description.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Room {
     /// The room identifier.
     pub xid: xid::Identifier,
@@ -206,6 +208,31 @@ pub struct Room {
 
     /// The identifiers of the room neighbours.
     pub see: Vec<xid::Identifier>,
+}
+
+impl redis::FromRedisValue for Room {
+    fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
+        match v {
+            redis::Value::Data(v) => {
+                rmp_serde::from_read_ref(v).map_err(|_| {
+                    (redis::ErrorKind::TypeError, "invalid room data").into()
+                })
+            }
+            _ => Err((redis::ErrorKind::TypeError, "invalid room data").into()),
+        }
+    }
+}
+
+impl redis::ToRedisArgs for Room {
+    fn write_redis_args<W: ?Sized>(&self, out: &mut W)
+    where
+        W: redis::RedisWrite,
+    {
+        match rmp_serde::to_vec(self) {
+            Ok(v) => out.write_arg(&v),
+            Err(_) => log::warn!("Failed to write {:?} to redis", self),
+        }
+    }
 }
 
 /// The room cache type.
