@@ -99,6 +99,18 @@ impl Message {
         Self { name, maze }
     }
 
+    /// The name of this message.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Ierates over all room descriptions.
+    pub fn rooms<'a>(&'a self) -> impl Iterator<Item = Room> + 'a {
+        self.maze
+            .positions()
+            .flat_map(move |pos| self.describe(pos))
+    }
+
     /// Returns the identifier of the entry room.
     pub fn entry(&self) -> xid::Identifier {
         self.maze.data((0isize, 0isize).into()).unwrap().id
