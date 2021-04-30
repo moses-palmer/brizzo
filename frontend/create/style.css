@@ -1,0 +1,92 @@
+@media (prefers-color-scheme: light) {
+    * {
+        color: black;
+    }
+    body {
+        background-color: #F8F8F8;
+    }
+    button, input, select {
+        background-color: white;
+        border-color: black;
+        color: black;
+    }
+    section {
+        background-color: white;
+        box-shadow: 1em 1em 3em 0 rgba(0, 0, 0, .4);
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    * {
+        color: #E0E0E0;
+    }
+    body {
+        background-color: black;
+    }
+    button, input, select {
+        background-color: #333333;
+        border-color: #E0E0E0;
+    }
+    section {
+        background-color: #222222;
+    }
+}
+
+@media (orientation: landscape) {
+    section {
+        width: 30em;
+    }
+}
+
+@media (orientation: portrait) {
+    section {
+        width: 80%;
+    }
+}
+
+body, html {
+    font-family: arial;
+    height: 100%;
+}
+
+body {
+    margin: 0;
+}
+
+article {
+    align-items: center;
+    display: flex;
+    flex-flow: column wrap;
+    justify-content: center;
+}
+
+section {
+    border-radius: 1rem;
+    display: flex;
+    flex-flow: column wrap;
+    margin-top: 2em;
+    padding: 1em;
+}
+
+hr {
+    height: 2rem;
+    visibility: hidden;
+}
+
+form {
+    display: flex;
+    flex-flow: column;
+    margin: 0;
+}
+
+label {
+    margin-top: 1rem;
+}
+label:first-of-type {
+    margin-top: 0;
+}
+
+button, input, select {
+    border-style: solid;
+    border-width: 1px;
+}
