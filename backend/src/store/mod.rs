@@ -123,11 +123,9 @@ impl Store {
 impl redis::FromRedisValue for messages::Room {
     fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
         match v {
-            redis::Value::Data(v) => {
-                rmp_serde::from_read_ref(v).map_err(|_| {
-                    (redis::ErrorKind::TypeError, "invalid room data").into()
-                })
-            }
+            redis::Value::Data(v) => rmp_serde::from_slice(v).map_err(|_| {
+                (redis::ErrorKind::TypeError, "invalid room data").into()
+            }),
             _ => Err((redis::ErrorKind::TypeError, "invalid room data").into()),
         }
     }
