@@ -89,12 +89,16 @@ impl Store {
             let entrance = message
                 .describe((0isize, 0isize).into())
                 .ok_or(Error::InternalError)?;
-            conn.set_ex(message.name(), entrance, self.ttl.as_secs() as usize)
-                .map_err(|_| Error::WriteError)?;
+            conn.set_ex::<_, _, ()>(
+                message.name(),
+                entrance,
+                self.ttl.as_secs() as usize,
+            )
+            .map_err(|_| Error::WriteError)?;
 
             // ...then all the others
             for room in message.rooms() {
-                conn.set_ex(
+                conn.set_ex::<_, _, ()>(
                     self.key(message.name(), room.xid),
                     room,
                     self.ttl.as_secs() as usize,
@@ -119,11 +123,9 @@ impl Store {
 impl redis::FromRedisValue for messages::Room {
     fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
         match v {
-            redis::Value::Data(v) => {
-                rmp_serde::from_read_ref(v).map_err(|_| {
-                    (redis::ErrorKind::TypeError, "invalid room data").into()
-                })
-            }
+            redis::Value::Data(v) => rmp_serde::from_slice(v).map_err(|_| {
+                (redis::ErrorKind::TypeError, "invalid room data").into()
+            }),
             _ => Err((redis::ErrorKind::TypeError, "invalid room data").into()),
         }
     }
