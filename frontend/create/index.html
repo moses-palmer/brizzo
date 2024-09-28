@@ -11,7 +11,7 @@
                 <form>
                     <label for="name">Name:</label>
                     <input
-                            name="name"
+                            id="name"
                             type="text"
                             placeholder="A BRIZZO name"
                             required="required"
@@ -19,7 +19,7 @@
 
                     <label for="text">Message:</label>
                     <input
-                            name="text"
+                            id="text"
                             type="text"
                             placeholder="A BRIZZO message"
                             required="required"
@@ -27,7 +27,7 @@
 
                     <label for="shape">Shape:</label>
                     <select
-                            name="shape">
+                            id="shape">
                         <option value="hex">Hexagonal</option>
                         <option value="quad">Quadratic</option>
                         <option value="tri">Triangular</option>
@@ -37,12 +37,9 @@
                         type="button"
                         value="Create message"
                         onclick="create(
-                            document.querySelector('input[name=name]')
-                                .value,
-                            document.querySelector('input[name=text]')
-                                .value,
-                            document.querySelector('select[name=shape]')
-                                .value)" />
+                            document.querySelector('#name').value,
+                            document.querySelector('#text').value,
+                            document.querySelector('#shape').value)" />
                 </form>
             </section>
         </article>
