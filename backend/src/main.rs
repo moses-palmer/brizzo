@@ -3,7 +3,6 @@ extern crate serde;
 
 use std::{env, io, sync};
 
-use env_logger;
 use actix_web::{web::Data, App, HttpServer};
 
 mod configuration;

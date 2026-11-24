@@ -37,7 +37,7 @@ pub enum Error {
     AlreadyExists,
 
     /// An internal error occurred.
-    InternalError,
+    Internal,
 }
 
 /// Creates a message.
@@ -52,7 +52,7 @@ pub async fn handle(
 ) -> impl Responder {
     let mut store = store.lock()?;
 
-    if req.text.len() > MAX_LENGTH || req.text.len() < 1 {
+    if req.text.len() > MAX_LENGTH || req.text.is_empty() {
         log::info!("Invalid message: {}", req.text);
         Err(Error::MessageInvalid)
     } else {
@@ -80,7 +80,7 @@ impl fmt::Display for Error {
         match self {
             Error::MessageInvalid => write!(f, "message invalid"),
             Error::AlreadyExists => write!(f, "already exists"),
-            Error::InternalError => write!(f, "internal error"),
+            Error::Internal => write!(f, "internal error"),
         }
     }
 }
@@ -90,19 +90,19 @@ impl ResponseError for Error {
         match self {
             Error::MessageInvalid => http::StatusCode::BAD_REQUEST,
             Error::AlreadyExists => http::StatusCode::CONFLICT,
-            Error::InternalError => http::StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Internal => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
 
 impl From<store::Error> for Error {
     fn from(_source: store::Error) -> Self {
-        Self::InternalError
+        Self::Internal
     }
 }
 
 impl<T> From<sync::PoisonError<T>> for Error {
     fn from(_source: sync::PoisonError<T>) -> Self {
-        Self::InternalError
+        Self::Internal
     }
 }

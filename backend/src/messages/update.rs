@@ -32,7 +32,7 @@ pub enum Error {
     IllegalTransition,
 
     /// An internal error occurred.
-    InternalError,
+    Internal,
 }
 
 #[put("/{message_name}")]
@@ -80,7 +80,7 @@ impl fmt::Display for Error {
             Error::UnknownMessage => write!(f, "unknown message"),
             Error::UnknownRoom => write!(f, "unknown room"),
             Error::IllegalTransition => write!(f, "illegal transition"),
-            Error::InternalError => write!(f, "internal error"),
+            Error::Internal => write!(f, "internal error"),
         }
     }
 }
@@ -91,7 +91,7 @@ impl ResponseError for Error {
             Error::UnknownMessage => http::StatusCode::NOT_FOUND,
             Error::UnknownRoom => http::StatusCode::NOT_FOUND,
             Error::IllegalTransition => http::StatusCode::NOT_FOUND,
-            Error::InternalError => http::StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Internal => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -104,12 +104,12 @@ impl From<xid::Error> for Error {
 
 impl From<store::Error> for Error {
     fn from(_source: store::Error) -> Self {
-        Self::InternalError
+        Self::Internal
     }
 }
 
 impl<T> From<sync::PoisonError<T>> for Error {
     fn from(_source: sync::PoisonError<T>) -> Self {
-        Self::InternalError
+        Self::Internal
     }
 }

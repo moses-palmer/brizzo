@@ -23,7 +23,7 @@ pub enum Error {
     UnknownRoom,
 
     /// An internal error occurred.
-    InternalError,
+    Internal,
 }
 
 #[get("/{message_name}")]
@@ -54,7 +54,7 @@ impl fmt::Display for Error {
         match self {
             Error::UnknownMessage => write!(f, "unknown message"),
             Error::UnknownRoom => write!(f, "unknown room"),
-            Error::InternalError => write!(f, "internal error"),
+            Error::Internal => write!(f, "internal error"),
         }
     }
 }
@@ -64,7 +64,7 @@ impl ResponseError for Error {
         match self {
             Error::UnknownMessage => http::StatusCode::NOT_FOUND,
             Error::UnknownRoom => http::StatusCode::NOT_FOUND,
-            Error::InternalError => http::StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Internal => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -77,12 +77,12 @@ impl From<xid::Error> for Error {
 
 impl From<store::Error> for Error {
     fn from(_source: store::Error) -> Self {
-        Self::InternalError
+        Self::Internal
     }
 }
 
 impl<T> From<sync::PoisonError<T>> for Error {
     fn from(_source: sync::PoisonError<T>) -> Self {
-        Self::InternalError
+        Self::Internal
     }
 }

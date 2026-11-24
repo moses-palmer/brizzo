@@ -7,16 +7,16 @@ pub enum Error {
     Connection,
 
     /// An internal error occurred.
-    InternalError,
+    Internal,
 
     /// A message exists.
     Exists,
 
     /// An error occurred while writing.
-    ReadError,
+    Read,
 
     /// An error occurred while writing.
-    WriteError,
+    Write,
 }
 
 impl error::Error for Error {}

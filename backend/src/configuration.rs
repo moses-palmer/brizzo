@@ -6,7 +6,6 @@ use std::{
 
 use actix_session::{storage::RedisSessionStore, SessionMiddleware};
 use actix_web::cookie::Key;
-use toml;
 
 use crate::store;
 
@@ -55,7 +54,7 @@ impl Configuration {
             file.read_to_string(&mut data)?;
             data
         })
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        .map_err(io::Error::other)
     }
 
     /// The bind string to which to listen.

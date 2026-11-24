@@ -11,7 +11,7 @@ pub mod update;
 pub mod xid;
 
 /// The name of the room identifier cookie.
-const XID_COOKIE: &'static str = "xid";
+const XID_COOKIE: &str = "xid";
 
 /// The colour of the text.
 const TEXT_COLOR: Color = Color {

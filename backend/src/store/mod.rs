@@ -81,13 +81,13 @@ impl Store {
             // First store the entrance room...
             let entrance = message
                 .describe((0isize, 0isize).into())
-                .ok_or(Error::InternalError)?;
+                .ok_or(Error::Internal)?;
             conn.set_ex::<_, _, ()>(
                 message.name(),
                 entrance,
                 self.ttl.as_secs(),
             )
-            .map_err(|_| Error::WriteError)?;
+            .map_err(|_| Error::Write)?;
 
             // ...then all the others
             for room in message.rooms() {
@@ -96,7 +96,7 @@ impl Store {
                     room,
                     self.ttl.as_secs(),
                 )
-                .map_err(|_| Error::WriteError)?;
+                .map_err(|_| Error::Write)?;
             }
 
             Ok(())
@@ -125,9 +125,9 @@ impl redis::FromRedisValue for messages::Room {
 }
 
 impl redis::ToRedisArgs for messages::Room {
-    fn write_redis_args<W: ?Sized>(&self, out: &mut W)
+    fn write_redis_args<W>(&self, out: &mut W)
     where
-        W: redis::RedisWrite,
+        W: redis::RedisWrite + ?Sized,
     {
         match rmp_serde::to_vec(self) {
             Ok(v) => out.write_arg(&v),
