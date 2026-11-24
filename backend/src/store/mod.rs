@@ -1,12 +1,8 @@
 use std::time;
 
-use r2d2_redis;
-use r2d2_redis::r2d2;
-use r2d2_redis::redis;
-use r2d2_redis::redis::Commands;
+use redis::Commands;
 
-use crate::messages;
-use crate::messages::xid;
+use crate::messages::{self, xid};
 
 mod error;
 pub use self::error::Error;
@@ -15,7 +11,7 @@ pub use self::error::Error;
 #[derive(Clone)]
 pub struct Store {
     /// The connection pool.
-    pool: r2d2::Pool<r2d2_redis::RedisConnectionManager>,
+    pool: r2d2::Pool<redis::Client>,
 
     /// The TTL for records.
     ttl: time::Duration,
@@ -34,12 +30,9 @@ impl Store {
     where
         T: redis::IntoConnectionInfo,
     {
-        Ok(Self {
-            pool: r2d2::Pool::builder().build(
-                r2d2_redis::RedisConnectionManager::new(connection_info)?,
-            )?,
-            ttl,
-        })
+        let client = redis::Client::open(connection_info).unwrap();
+        let pool = r2d2::Pool::builder().build(client).unwrap();
+        Ok(Self { pool, ttl })
     }
 
     /// Reads a room description from the store.
@@ -92,7 +85,7 @@ impl Store {
             conn.set_ex::<_, _, ()>(
                 message.name(),
                 entrance,
-                self.ttl.as_secs() as usize,
+                self.ttl.as_secs(),
             )
             .map_err(|_| Error::WriteError)?;
 
@@ -101,7 +94,7 @@ impl Store {
                 conn.set_ex::<_, _, ()>(
                     self.key(message.name(), room.xid),
                     room,
-                    self.ttl.as_secs() as usize,
+                    self.ttl.as_secs(),
                 )
                 .map_err(|_| Error::WriteError)?;
             }
@@ -121,12 +114,12 @@ impl Store {
 }
 
 impl redis::FromRedisValue for messages::Room {
-    fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
+    fn from_redis_value(v: redis::Value) -> Result<Self, redis::ParsingError> {
         match v {
-            redis::Value::Data(v) => rmp_serde::from_slice(v).map_err(|_| {
-                (redis::ErrorKind::TypeError, "invalid room data").into()
-            }),
-            _ => Err((redis::ErrorKind::TypeError, "invalid room data").into()),
+            redis::Value::BulkString(v) => {
+                rmp_serde::from_slice(&v).map_err(|e| e.to_string().into())
+            }
+            _ => Err("unexpected value type".into()),
         }
     }
 }

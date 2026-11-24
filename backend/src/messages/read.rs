@@ -1,9 +1,7 @@
-use std::fmt;
-use std::sync;
+use std::{fmt, sync};
 
-use actix_http::error::ResponseError;
 use actix_session::Session;
-use actix_web::{get, http, web, Responder};
+use actix_web::{get, http, web, Responder, ResponseError};
 
 use super::xid;
 use crate::store;
@@ -31,7 +29,7 @@ pub enum Error {
 #[get("/{message_name}")]
 pub async fn handle(
     path: web::Path<Path>,
-    store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
+    store: web::Data<sync::Mutex<store::Store>>,
     session: Session,
 ) -> impl Responder {
     let mut store = store.lock()?;

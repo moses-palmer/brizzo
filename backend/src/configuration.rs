@@ -1,9 +1,11 @@
-use std::fs;
-use std::io;
-use std::io::Read;
-use std::time;
+use std::{
+    fs,
+    io::{self, Read},
+    time,
+};
 
-use actix_session::CookieSession;
+use actix_session::{storage::RedisSessionStore, SessionMiddleware};
+use actix_web::cookie::Key;
 use toml;
 
 use crate::store;
@@ -28,12 +30,6 @@ struct Server {
 
 #[derive(Clone, Deserialize, Serialize)]
 struct Session {
-    /// The secret used to protect cookies.
-    secret: String,
-
-    /// Whether the cookie should be secure.
-    secure: bool,
-
     /// The name of the cookie
     name: String,
 }
@@ -68,10 +64,12 @@ impl Configuration {
     }
 
     /// A cookie session description.
-    pub fn session(&self) -> CookieSession {
-        CookieSession::signed(self.session.secret.as_bytes())
-            .secure(self.session.secure)
-            .name(&self.session.name)
+    pub fn session_middleware(
+        &self,
+        store: RedisSessionStore,
+        key: Key,
+    ) -> SessionMiddleware<RedisSessionStore> {
+        SessionMiddleware::new(store, key)
     }
 
     /// A store for values.
@@ -80,5 +78,17 @@ impl Configuration {
             self.redis.connection_string.clone(),
             time::Duration::from_millis(self.redis.ttl),
         )
+    }
+
+    /// A store for values.
+    pub async fn session_store(
+        &self,
+    ) -> Result<RedisSessionStore, store::Error> {
+        RedisSessionStore::new(&self.redis.connection_string)
+            .await
+            .map_err(|e| {
+                log::error!("failed to connect to Redis: {e:?}");
+                store::Error::Connection
+            })
     }
 }
