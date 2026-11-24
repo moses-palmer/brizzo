@@ -1,13 +1,9 @@
 use std::ops;
 
 use actix_session::Session;
-
-use maze::initialize;
-use maze::matrix;
-use maze::physical;
-use maze_tools::alphabet;
-use maze_tools::cell::*;
-use maze_tools::image::Color;
+use maze::{initialize, matrix, physical};
+use maze_tools::{alphabet, cell::*, image::Color};
+use redis::ToSingleRedisArg;
 
 pub mod create;
 pub mod read;
@@ -15,7 +11,7 @@ pub mod update;
 pub mod xid;
 
 /// The name of the room identifier cookie.
-const XID_COOKIE: &'static str = "xid";
+const XID_COOKIE: &str = "xid";
 
 /// The colour of the text.
 const TEXT_COLOR: Color = Color {
@@ -183,6 +179,8 @@ pub struct Room {
     pub see: Vec<xid::Identifier>,
 }
 
+impl ToSingleRedisArg for Room {}
+
 /// Clears the session cookie.
 ///
 /// # Arguments
@@ -214,7 +212,7 @@ pub fn store_id(
     id: xid::Identifier,
 ) -> Result<xid::Identifier, xid::Error> {
     session
-        .set(XID_COOKIE, xid::IdentifierCookie::from(id).to_string())
+        .insert(XID_COOKIE, xid::IdentifierCookie::from(id).to_string())
         .map_err(|_| xid::Error::Format)
         .map(|_| id)
 }

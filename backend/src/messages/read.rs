@@ -1,9 +1,7 @@
-use std::fmt;
-use std::sync;
+use std::{fmt, sync};
 
-use actix_http::error::ResponseError;
 use actix_session::Session;
-use actix_web::{get, http, web, Responder};
+use actix_web::{get, http, web, Responder, ResponseError};
 
 use super::xid;
 use crate::store;
@@ -25,13 +23,13 @@ pub enum Error {
     UnknownRoom,
 
     /// An internal error occurred.
-    InternalError,
+    Internal,
 }
 
 #[get("/{message_name}")]
 pub async fn handle(
     path: web::Path<Path>,
-    store: web::Data<sync::Arc<sync::Mutex<store::Store>>>,
+    store: web::Data<sync::Mutex<store::Store>>,
     session: Session,
 ) -> impl Responder {
     let mut store = store.lock()?;
@@ -56,7 +54,7 @@ impl fmt::Display for Error {
         match self {
             Error::UnknownMessage => write!(f, "unknown message"),
             Error::UnknownRoom => write!(f, "unknown room"),
-            Error::InternalError => write!(f, "internal error"),
+            Error::Internal => write!(f, "internal error"),
         }
     }
 }
@@ -66,7 +64,7 @@ impl ResponseError for Error {
         match self {
             Error::UnknownMessage => http::StatusCode::NOT_FOUND,
             Error::UnknownRoom => http::StatusCode::NOT_FOUND,
-            Error::InternalError => http::StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Internal => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -79,12 +77,12 @@ impl From<xid::Error> for Error {
 
 impl From<store::Error> for Error {
     fn from(_source: store::Error) -> Self {
-        Self::InternalError
+        Self::Internal
     }
 }
 
 impl<T> From<sync::PoisonError<T>> for Error {
     fn from(_source: sync::PoisonError<T>) -> Self {
-        Self::InternalError
+        Self::Internal
     }
 }

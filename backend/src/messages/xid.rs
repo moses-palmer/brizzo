@@ -1,9 +1,4 @@
-use std::fmt;
-use std::num;
-use std::str;
-use std::time;
-
-use std::ops::Add;
+use std::{fmt, num, ops::Add, str, time};
 
 use serde;
 

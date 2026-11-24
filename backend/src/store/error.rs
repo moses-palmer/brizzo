@@ -1,9 +1,4 @@
-use std::error;
-use std::fmt;
-use std::io;
-
-use r2d2_redis::r2d2;
-use r2d2_redis::redis;
+use std::{error, fmt, io};
 
 /// Errors relating to the store.
 #[derive(Copy, Clone, Debug)]
@@ -12,16 +7,16 @@ pub enum Error {
     Connection,
 
     /// An internal error occurred.
-    InternalError,
+    Internal,
 
     /// A message exists.
     Exists,
 
     /// An error occurred while writing.
-    ReadError,
+    Read,
 
     /// An error occurred while writing.
-    WriteError,
+    Write,
 }
 
 impl error::Error for Error {}
